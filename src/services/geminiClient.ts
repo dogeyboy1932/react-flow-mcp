@@ -13,6 +13,7 @@ class GeminiMCPClient {
   private model: any = null;
   private client: Client | null = null;
   private tools: MCPTool[] = [];
+  private currentServer: any = null;  // Track the current running server
 
   setApiKey(apiKey: string) {
     if (!apiKey) return;
@@ -20,15 +21,25 @@ class GeminiMCPClient {
     this.updateModel();
   }
 
-  async connect(): Promise<boolean> {
+  async connect(serverType: string = 'weather-mcp'): Promise<boolean> {
     try {
-      // First, start the weather server
-      const { setupWeatherMCPServer } = await import('./weatherMCPServer');
-      console.log('🌤️ Starting weather server...');
-      await setupWeatherMCPServer();
+      // First, properly disconnect and stop any existing server
+      await this.fullDisconnect();
       
-      // Small delay to ensure server is ready
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Start the appropriate server based on type
+      console.log(`🚀 Starting ${serverType} server...`);
+      if (serverType === 'weather-mcp') {
+        const { setupWeatherMCPServer } = await import('./weatherMCPServer');
+        this.currentServer = await setupWeatherMCPServer();
+      } else if (serverType === 'github-mcp') {
+        const { setupGitHubMCPServer } = await import('./githubMCPServer');
+        this.currentServer = await setupGitHubMCPServer();
+      } else {
+        throw new Error(`Unknown server type: ${serverType}`);
+      }
+      
+      // Longer delay to ensure server is properly started
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // Now connect client to the server
       const transport = new TabClientTransport({
@@ -50,7 +61,7 @@ class GeminiMCPClient {
         parameters: tool.inputSchema || {}
       }));
 
-      console.log('✅ Connected to MCP server with tools:', this.tools);
+      console.log(`✅ Connected to ${serverType} with ${this.tools.length} tools:`, this.tools.map(t => t.name));
       this.updateModel();
       return true;
     } catch (error) {
@@ -59,13 +70,41 @@ class GeminiMCPClient {
     }
   }
 
-  disconnect() {
+  async disconnect() {
+    await this.fullDisconnect();
+  }
+
+  private async fullDisconnect() {
+    console.log('🔌 Performing full disconnect...');
+    
+    // Disconnect client
     if (this.client) {
-      this.client.close();
+      try {
+        this.client.close();
+      } catch (error) {
+        console.warn('Error closing client:', error);
+      }
       this.client = null;
-      this.tools = [];
-      this.updateModel();
     }
+    
+    // Stop current server
+    if (this.currentServer) {
+      try {
+        if (typeof this.currentServer.close === 'function') {
+          await this.currentServer.close();
+        }
+      } catch (error) {
+        console.warn('Error closing server:', error);
+      }
+      this.currentServer = null;
+    }
+    
+    // Clear tools and update model
+    this.tools = [];
+    this.updateModel();
+    
+    // Additional delay to ensure cleanup
+    await new Promise(resolve => setTimeout(resolve, 200));
   }
 
   private updateModel() {

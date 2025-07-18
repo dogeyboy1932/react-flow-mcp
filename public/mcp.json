@@ -8,6 +8,10 @@
       "command": "node",
       "args": ["/home/dogeyboy19/Desktop/gtmp/MCP-Practice/react-flow-mcp-simple/enhanced-weather-server.js"]
     },
+    "github-mcp": {
+      "command": "node", 
+      "args": ["github-server.js"]
+    },
     "filesystem-mcp": {
       "command": "node",
       "args": [
