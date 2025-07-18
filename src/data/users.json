@@ -1,0 +1,9 @@
+[
+    {
+      "id": 1,
+      "name": "Alice Johnson",
+      "email": "alice@test.com",
+      "address": "123 Maple St, Springfield, IL",
+      "phone": "555-1234"
+    }
+]

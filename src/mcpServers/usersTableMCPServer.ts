@@ -2,20 +2,82 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { TabServerTransport } from '@mcp-b/transports';
 import { z } from 'zod';
 
-// In-memory user storage (in a real app, this would be a database)
+// User interface
 interface User {
-  id: string;
+  id: number;
   name: string;
   email: string;
   phone: string;
   address: string;
-  createdAt: string;
 }
 
-let users: User[] = [];
+// Constants
+const USERS_STORAGE_KEY = 'users-mcp-data';
+
+// Data access functions
+export async function loadUsers(): Promise<User[]> {
+  try {
+    const usersData = localStorage.getItem(USERS_STORAGE_KEY);
+    if (!usersData) {
+      return [];
+    }
+    const users = JSON.parse(usersData);
+    return Array.isArray(users) ? users : [];
+  } catch (error) {
+    console.error('Error loading users from localStorage:', error);
+    return [];
+  }
+}
+
+export async function saveUsers(users: User[]): Promise<void> {
+  try {
+    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+  } catch (error) {
+    console.error('Error saving users to localStorage:', error);
+    throw new Error('Failed to save users to localStorage');
+  }
+}
+
+export async function createUser(userData: {
+  name: string;
+  email: string;
+  address: string;
+  phone: string;
+}): Promise<number> {
+  const users = await loadUsers();
+  const id = users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1;
+  
+  users.push({ id, ...userData });
+  await saveUsers(users);
+  
+  return id;
+}
+
+export async function deleteUser(id: number): Promise<User | null> {
+  const users = await loadUsers();
+  const userIndex = users.findIndex(u => u.id === id);
+  
+  if (userIndex === -1) {
+    return null;
+  }
+  
+  const deletedUser = users.splice(userIndex, 1)[0];
+  await saveUsers(users);
+  
+  return deletedUser;
+}
+
+export async function clearAllUsers(): Promise<number> {
+  const users = await loadUsers();
+  const count = users.length;
+  
+  await saveUsers([]);
+  
+  return count;
+}
 
 // Helper function to generate fake user data
-function generateFakeUser(): Omit<User, 'id' | 'createdAt'> {
+function generateFakeUser(): Omit<User, 'id'> {
   const firstNames = ['John', 'Jane', 'Michael', 'Sarah', 'David', 'Emily', 'Robert', 'Lisa', 'James', 'Maria'];
   const lastNames = ['Smith', 'Johnson', 'Brown', 'Davis', 'Miller', 'Wilson', 'Moore', 'Taylor', 'Anderson', 'Thomas'];
   const domains = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'aol.com'];
@@ -38,19 +100,16 @@ function generateFakeUser(): Omit<User, 'id' | 'createdAt'> {
   };
 }
 
-// Helper function to create a user
-function createUser(userData: Omit<User, 'id' | 'createdAt'>): User {
-  const user: User = {
-    id: Math.random().toString(36).substr(2, 9),
-    ...userData,
-    createdAt: new Date().toISOString()
-  };
-  users.push(user);
-  return user;
+// Helper function to create a user using the existing tooling
+async function createUserWithData(userData: Omit<User, 'id'>): Promise<User> {
+  const id = await createUser(userData);
+  return { id, ...userData };
 }
 
 // Helper function to send users to frontend
-function sendUsersToFrontend(): string {
+async function sendUsersToFrontend(): Promise<string> {
+  const users = await loadUsers();
+  
   if (users.length === 0) {
     return `
       <div style="text-align: center; padding: 20px; color: #666;">
@@ -66,7 +125,6 @@ function sendUsersToFrontend(): string {
       <td style="padding: 8px; border-bottom: 1px solid #eee;">${user.email}</td>
       <td style="padding: 8px; border-bottom: 1px solid #eee;">${user.phone}</td>
       <td style="padding: 8px; border-bottom: 1px solid #eee;">${user.address}</td>
-      <td style="padding: 8px; border-bottom: 1px solid #eee;">${new Date(user.createdAt).toLocaleDateString()}</td>
     </tr>
   `).join('');
 
@@ -80,7 +138,6 @@ function sendUsersToFrontend(): string {
             <th style="padding: 12px 8px; text-align: left; border-bottom: 2px solid #ddd; font-weight: bold;">Email</th>
             <th style="padding: 12px 8px; text-align: left; border-bottom: 2px solid #ddd; font-weight: bold;">Phone</th>
             <th style="padding: 12px 8px; text-align: left; border-bottom: 2px solid #ddd; font-weight: bold;">Address</th>
-            <th style="padding: 12px 8px; text-align: left; border-bottom: 2px solid #ddd; font-weight: bold;">Created</th>
           </tr>
         </thead>
         <tbody>
@@ -118,19 +175,21 @@ function createUsersMcpServer(): McpServer {
     async ({ name, email, phone, address }) => {
       console.log(`👤 Users: Creating user ${name}`);
       
-      // Check if email already exists
-      const existingUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-      if (existingUser) {
-        return {
-          content: [{
-            type: 'text',
-            text: `❌ A user with email "${email}" already exists.`
-          }]
-        };
-      }
-
       try {
-        const user = createUser({ name, email, phone, address });
+        const users = await loadUsers();
+        
+        // Check if email already exists
+        const existingUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+        if (existingUser) {
+          return {
+            content: [{
+              type: 'text',
+              text: `❌ A user with email "${email}" already exists.`
+            }]
+          };
+        }
+
+        const user = await createUserWithData({ name, email, phone, address });
         
         return {
           content: [{
@@ -160,6 +219,7 @@ function createUsersMcpServer(): McpServer {
       console.log(`👤 Users: Creating ${count} random user(s)`);
       
       try {
+        const users = await loadUsers();
         const createdUsers: User[] = [];
         
         for (let i = 0; i < count; i++) {
@@ -171,7 +231,7 @@ function createUsersMcpServer(): McpServer {
             attempts++;
           }
           
-          const user = createUser(fakeData);
+          const user = await createUserWithData(fakeData);
           createdUsers.push(user);
         }
         
@@ -202,27 +262,39 @@ function createUsersMcpServer(): McpServer {
     'get-all-users',
     {},
     async () => {
-      console.log(`👤 Users: Getting all users (${users.length} total)`);
+      console.log(`👤 Users: Getting all users`);
       
-      if (users.length === 0) {
+      try {
+        const users = await loadUsers();
+        
+        if (users.length === 0) {
+          return {
+            content: [{
+              type: 'text',
+              text: `📋 No users found. Create some users first!`
+            }]
+          };
+        }
+
+        const usersList = users.map(user => 
+          `👤 **${user.name}** (ID: ${user.id})\n📧 ${user.email}\n📞 ${user.phone}\n🏠 ${user.address}`
+        ).join('\n\n---\n\n');
+
         return {
           content: [{
             type: 'text',
-            text: `📋 No users found. Create some users first!`
+            text: `📋 All Users (${users.length} total):\n\n${usersList}`
+          }]
+        };
+      } catch (error) {
+        console.error('Failed to get users:', error);
+        return {
+          content: [{
+            type: 'text',
+            text: `❌ Failed to get users: ${error instanceof Error ? error.message : 'Unknown error'}`
           }]
         };
       }
-
-      const usersList = users.map(user => 
-        `👤 **${user.name}** (ID: ${user.id})\n📧 ${user.email}\n📞 ${user.phone}\n🏠 ${user.address}\n📅 Created: ${new Date(user.createdAt).toLocaleDateString()}`
-      ).join('\n\n---\n\n');
-
-      return {
-        content: [{
-          type: 'text',
-          text: `📋 All Users (${users.length} total):\n\n${usersList}`
-        }]
-      };
     }
   );
 
@@ -233,14 +305,24 @@ function createUsersMcpServer(): McpServer {
     async () => {
       console.log(`📊 Users: Showing users table`);
       
-      const tableHtml = sendUsersToFrontend();
-      
-      return {
-        content: [{
-          type: 'text',
-          text: `📊 Users Table:\n\n${tableHtml}`
-        }]
-      };
+      try {
+        const tableHtml = await sendUsersToFrontend();
+        
+        return {
+          content: [{
+            type: 'text',
+            text: `📊 Users Table:\n\n${tableHtml}`
+          }]
+        };
+      } catch (error) {
+        console.error('Failed to show users table:', error);
+        return {
+          content: [{
+            type: 'text',
+            text: `❌ Failed to show users table: ${error instanceof Error ? error.message : 'Unknown error'}`
+          }]
+        };
+      }
     }
   );
 
@@ -248,29 +330,38 @@ function createUsersMcpServer(): McpServer {
   server.tool(
     'delete-user',
     {
-      id: z.string().describe('User ID to delete')
+      id: z.number().describe('User ID to delete')
     },
     async ({ id }) => {
       console.log(`👤 Users: Deleting user ${id}`);
       
-      const userIndex = users.findIndex(u => u.id === id);
-      if (userIndex === -1) {
+      try {
+        const deletedUser = await deleteUser(id);
+        
+        if (!deletedUser) {
+          return {
+            content: [{
+              type: 'text',
+              text: `❌ User with ID "${id}" not found.`
+            }]
+          };
+        }
+        
         return {
           content: [{
             type: 'text',
-            text: `❌ User with ID "${id}" not found.`
+            text: `✅ User "${deletedUser.name}" (${deletedUser.email}) has been deleted.`
+          }]
+        };
+      } catch (error) {
+        console.error('Failed to delete user:', error);
+        return {
+          content: [{
+            type: 'text',
+            text: `❌ Failed to delete user: ${error instanceof Error ? error.message : 'Unknown error'}`
           }]
         };
       }
-
-      const deletedUser = users.splice(userIndex, 1)[0];
-      
-      return {
-        content: [{
-          type: 'text',
-          text: `✅ User "${deletedUser.name}" (${deletedUser.email}) has been deleted.`
-        }]
-      };
     }
   );
 
@@ -281,15 +372,24 @@ function createUsersMcpServer(): McpServer {
     async () => {
       console.log(`👤 Users: Clearing all users`);
       
-      const count = users.length;
-      users = [];
-      
-      return {
-        content: [{
-          type: 'text',
-          text: `✅ All ${count} users have been cleared.`
-        }]
-      };
+      try {
+        const count = await clearAllUsers();
+        
+        return {
+          content: [{
+            type: 'text',
+            text: `✅ All ${count} users have been cleared.`
+          }]
+        };
+      } catch (error) {
+        console.error('Failed to clear users:', error);
+        return {
+          content: [{
+            type: 'text',
+            text: `❌ Failed to clear users: ${error instanceof Error ? error.message : 'Unknown error'}`
+          }]
+        };
+      }
     }
   );
 

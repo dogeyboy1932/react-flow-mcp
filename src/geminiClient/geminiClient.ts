@@ -2,7 +2,8 @@ import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { TabClientTransport } from '@mcp-b/transports';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 
-import { MCP_SERVERS } from '../config';
+import { MCP_SERVERS } from '../mcp_config';
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 
 interface MCPTool {
@@ -16,7 +17,8 @@ class GeminiMCPClient {
   private model: any = null;
   private client: Client | null = null;
   private tools: MCPTool[] = [];
-  private currentServer: any = null;
+  private currentServer: McpServer | null = null;
+  private currentServerName: string | null = null;
 
 
   // Connect Functions
@@ -31,6 +33,8 @@ class GeminiMCPClient {
       const serverPath = MCP_SERVERS[serverType as keyof typeof MCP_SERVERS].serverPath;
       const { setupMCPServer } = await import(serverPath);
       this.currentServer = await setupMCPServer();
+
+      this.currentServerName = serverType;
 
       
       // Longer delay to ensure server is properly started
@@ -104,6 +108,14 @@ class GeminiMCPClient {
     await new Promise(resolve => setTimeout(resolve, 200));
   }
 
+
+  async callTool(toolName: string, args: any) {
+    if (!this.client) return;
+    return await this.client.callTool({
+      name: toolName,
+      arguments: args
+    });
+  }
 
   // Chat Functions
   async chat(message: string): Promise<string> {
@@ -210,6 +222,10 @@ class GeminiMCPClient {
   
   isConnected(): boolean {
     return this.client !== null;
+  }
+
+  getCurrentServer(): any {
+    return this.currentServerName;
   }
 }
 

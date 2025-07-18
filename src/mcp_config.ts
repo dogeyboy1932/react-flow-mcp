@@ -18,10 +18,10 @@ export const MCP_SERVERS = {
       url: 'mcp://users-mcp',
       serverPath: '../mcpServers/usersTableMCPServer',
     },
-    // 'usersTable-mcp': {
-    //   label: 'Users MCP',
-    //   position: { x: 400, y: 350 },
-    //   url: 'mcp://users-mcp',
-    //   serverPath: '../mcpServers/usersTableMCPServer',
-    // },
+    'math': {
+      label: 'Math MCP',
+      position: { x: 400, y: 500 },
+      url: 'mcp://math-mcp',
+      serverPath: '../mcpServers/mathMCPServer',
+    },
   } as const;
