@@ -1,0 +1,23 @@
+{
+  "mcpServers": {
+    "solanaMcp": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://mcp.solana.com/mcp"]
+    },
+    "weather-mcp": {
+      "command": "node",
+      "args": ["/home/dogeyboy19/Desktop/gtmp/MCP-Practice/react-flow-mcp-simple/enhanced-weather-server.js"]
+    },
+    "filesystem-mcp": {
+      "command": "node",
+      "args": [
+        "/home/dogeyboy19/applications/MCP_OFFICIAL/servers/filesystem/dist/index.js", 
+        "/home/dogeyboy19/Desktop/gtmp/MCP-Practice"
+      ]
+    },
+    "browser-tools-mcp": {
+      "command": "npx",
+      "args": ["@agentdeskai/browser-tools-mcp@latest"]
+    }
+  }
+}
