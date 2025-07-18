@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useState } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -12,45 +12,53 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
-import LLMNode from './components/LLMNode';
-import MCPServerNode from './components/MCPServerNode';
+import LLMNode from './components/nodes/LLMNode';
+import MCPServerNode from './components/nodes/MCPServerNode';
 import { geminiClient } from './geminiClient/geminiClient';
 import './App.css';
+
+import { MCP_SERVERS } from './config';
+
+
+const LLM_NODE_ID = 'llm-1';
 
 const nodeTypes: NodeTypes = {
   llm: LLMNode,
   mcpServer: MCPServerNode,
 };
 
+
+// Helper functions
+const createMCPServerNode = (id: string, config: typeof MCP_SERVERS[keyof typeof MCP_SERVERS]): Node => ({
+  id,
+  type: 'mcpServer',
+  position: config.position,
+  data: {
+    label: config.label,
+    serverType: id,
+    url: config.url,
+    description: `${config.label} - Not connected`,
+  },
+});
+
+const isMCPServer = (nodeId: string | null): nodeId is keyof typeof MCP_SERVERS => {
+  if (!nodeId) return false;
+  
+  return nodeId in MCP_SERVERS;
+};
+
+const getServerName = (serverId: string): string => {
+  return isMCPServer(serverId) ? MCP_SERVERS[serverId].label : serverId;
+};
+
 const initialNodes: Node[] = [
   {
-    id: 'llm-1',
+    id: LLM_NODE_ID,
     type: 'llm',
     position: { x: 100, y: 150 },
     data: { label: 'Gemini LLM' },
   },
-  {
-    id: 'weather-mcp',
-    type: 'mcpServer',
-    position: { x: 400, y: 50 },
-    data: {
-      label: 'Weather MCP',
-      serverType: 'weather-mcp',  
-      url: 'mcp://weather-mcp',
-      description: 'Weather MCP - Not connected'
-    },
-  },
-  {
-    id: 'github-mcp',
-    type: 'mcpServer',
-    position: { x: 400, y: 200 },
-    data: {
-      label: 'GitHub MCP',
-      serverType: 'github-mcp',
-      url: 'mcp://github-mcp',
-      description: 'GitHub MCP - Not connected'
-    },
-  }
+  ...Object.entries(MCP_SERVERS).map(([id, config]) => createMCPServerNode(id, config)),
 ];
 
 function App() {
@@ -58,77 +66,82 @@ function App() {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [chatMessage, setChatMessage] = useState('');
   const [chatHistory, setChatHistory] = useState<string[]>([
-    '🎉 Ready! Connect the LLM to Weather or GitHub MCP servers to start.'
+    '🎉 Ready! Connect the LLM to any MCP server to start.'
   ]);
   const [isLoading, setIsLoading] = useState(false);
 
+  const addChatMessage = useCallback((message: string) => {
+    setChatHistory(prev => [...prev, message]);
+  }, []);
+
+  const updateNodeDescription = useCallback((nodeId: string, description: string) => {
+    setNodes(nodes => nodes.map(node => 
+      node.id === nodeId 
+        ? { ...node, data: { ...node.data, description } }
+        : node
+    ));
+  }, [setNodes]);
+
+  const disconnectExistingMCP = useCallback(async () => {
+    const mcpEdges = edges.filter(edge => 
+      edge.source === LLM_NODE_ID && isMCPServer(edge.target)
+    );
+    
+    if (mcpEdges.length > 0) {
+      console.log('🔌 Auto-disconnecting previous MCP connection...');
+      await geminiClient.disconnect();
+      
+      // Remove existing MCP edges
+      setEdges(eds => eds.filter(edge => 
+        !(edge.source === LLM_NODE_ID && isMCPServer(edge.target))
+      ));
+      
+      // Reset node descriptions
+      mcpEdges.forEach(edge => {
+        const serverName = getServerName(edge.target);
+        updateNodeDescription(edge.target, `${serverName} - Not connected`);
+      });
+      
+      addChatMessage('🔌 Auto-disconnected previous server to connect to new one');
+    }
+  }, [edges, setEdges, updateNodeDescription, addChatMessage]);
+
+  const connectToMCP = useCallback(async (targetId: string) => {
+    console.log(`🔗 Connecting to ${targetId}...`);
+    
+    const success = await geminiClient.connect(targetId);
+    const toolCount = geminiClient.getTools().length;
+    const serverName = getServerName(targetId);
+    
+    if (success) {
+      addChatMessage(`🔗 Connected to ${serverName} (${toolCount} tools)`);
+      updateNodeDescription(targetId, `${serverName} - ${toolCount} tools`);
+    } else {
+      addChatMessage(`⚠️ Failed to connect to ${serverName}`);
+    }
+  }, [addChatMessage, updateNodeDescription]);
+
   const onConnect = useCallback(async (params: Connection) => {
-    if (params.source === 'llm-1' && (params.target === 'weather-mcp' || params.target === 'github-mcp')) {
-      // First, disconnect any existing connections and remove those edges
-      const currentEdges = edges.filter(edge => 
-        edge.source === 'llm-1' && (edge.target === 'weather-mcp' || edge.target === 'github-mcp')
-      );
-      
-             if (currentEdges.length > 0) {
-         console.log('🔌 Auto-disconnecting previous MCP connection...');
-         await geminiClient.disconnect();
-         
-         // Remove existing MCP edges and reset node descriptions
-         setEdges(eds => eds.filter(edge => 
-           !(edge.source === 'llm-1' && (edge.target === 'weather-mcp' || edge.target === 'github-mcp'))
-         ));
-         
-         setNodes(nodes => nodes.map(node => {
-           if (node.id === 'weather-mcp' || node.id === 'github-mcp') {
-             const serverName = node.id === 'weather-mcp' ? 'Weather MCP' : 'GitHub MCP';
-             return { ...node, data: { ...node.data, description: `${serverName} - Not connected` } };
-           }
-           return node;
-         }));
-         
-         setChatHistory(prev => [...prev, '🔌 Auto-disconnected previous server to connect to new one']);
-       }
-      
-      // Add the new edge
+    if (params.source === LLM_NODE_ID && isMCPServer(params.target)) {
+      await disconnectExistingMCP();
       setEdges((eds) => addEdge(params, eds));
-      
-      console.log(`🔗 Connecting to ${params.target}...`);
-      
-      const success = await geminiClient.connect(params.target);
-      const toolCount = geminiClient.getTools().length;
-      
-      if (success) {
-        const serverName = params.target === 'weather-mcp' ? 'Weather MCP' : 'GitHub MCP';
-        setChatHistory(prev => [...prev, `🔗 Connected to ${serverName} (${toolCount} tools)`]);
-        setNodes(nodes => nodes.map(node => 
-          node.id === params.target 
-            ? { ...node, data: { ...node.data, description: `${serverName} - ${toolCount} tools` } }
-            : node
-        ));
-      } else {
-        const serverName = params.target === 'weather-mcp' ? 'Weather MCP' : 'GitHub MCP';
-        setChatHistory(prev => [...prev, `⚠️ Failed to connect to ${serverName}`]);
-      }
+      await connectToMCP(params.target);
     } else {
       // For non-MCP connections, just add the edge normally
       setEdges((eds) => addEdge(params, eds));
     }
-  }, [setEdges, setNodes, edges]);
+  }, [setEdges, disconnectExistingMCP, connectToMCP]);
 
   const onEdgesDelete = useCallback(async (edgesToDelete: Edge[]) => {
     for (const edge of edgesToDelete) {
-      if (edge.source === 'llm-1' && (edge.target === 'weather-mcp' || edge.target === 'github-mcp')) {
+      if (edge.source === LLM_NODE_ID && isMCPServer(edge.target)) {
         await geminiClient.disconnect();
-        const serverName = edge.target === 'weather-mcp' ? 'Weather MCP' : 'GitHub MCP';
-        setChatHistory(prev => [...prev, `🔌 Disconnected from ${serverName}`]);
-        setNodes(nodes => nodes.map(node => 
-          node.id === edge.target 
-            ? { ...node, data: { ...node.data, description: `${serverName} - Not connected` } }
-            : node
-        ));
+        const serverName = getServerName(edge.target);
+        addChatMessage(`🔌 Disconnected from ${serverName}`);
+        updateNodeDescription(edge.target, `${serverName} - Not connected`);
       }
     }
-  }, [setNodes]);
+  }, [addChatMessage, updateNodeDescription]);
 
   const handleSendMessage = async () => {
     if (!chatMessage.trim() || isLoading) return;
@@ -138,11 +151,11 @@ function App() {
     setChatMessage('');
 
     try {
-      setChatHistory(prev => [...prev, `You: ${userMessage}`]);
+      addChatMessage(`You: ${userMessage}`);
       const response = await geminiClient.chat(userMessage);
-      setChatHistory(prev => [...prev, `Gemini: ${response}`]);
+      addChatMessage(`Gemini: ${response}`);
     } catch (error) {
-      setChatHistory(prev => [...prev, `Error: ${error instanceof Error ? error.message : 'Unknown error'}`]);
+      addChatMessage(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }
@@ -162,7 +175,7 @@ function App() {
     
     if (apiKey) {
       geminiClient.setApiKey(apiKey);
-      setChatHistory(prev => [...prev, '🔑 API Key set']);
+      addChatMessage('🔑 API Key set');
     }
   };
 
@@ -322,7 +335,7 @@ function App() {
             value={chatMessage}
             onChange={(e) => setChatMessage(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Ask about weather, GitHub repos, or anything else..."
+            placeholder="Ask about weather, GitHub repos, users, or anything else..."
             style={{ 
               flex: 1, 
               padding: '12px', 

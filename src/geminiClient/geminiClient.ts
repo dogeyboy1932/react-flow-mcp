@@ -2,6 +2,9 @@ import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { TabClientTransport } from '@mcp-b/transports';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 
+import { MCP_SERVERS } from '../config';
+
+
 interface MCPTool {
   name: string;
   description: string;
@@ -16,11 +19,6 @@ class GeminiMCPClient {
   private currentServer: any = null;
 
 
-  private initialMock = {
-    'weather-mcp': '../mcpServers/weatherMCPServer',
-    'github-mcp': '../mcpServers/githubMCPServer'
-  }
-
   // Connect Functions
   async connect(serverType: string = 'weather-mcp'): Promise<boolean> {
     try {
@@ -28,18 +26,9 @@ class GeminiMCPClient {
       await this.fullDisconnect();
       
       // Start the appropriate server based on type
-      console.log(`🚀 Starting ${serverType} server...`);
-      // if (serverType === 'weather-mcp') {
-      //   const { setupMCPServer } = await import('../mcpServers/weatherMCPServer');
-      //   this.currentServer = await setupMCPServer();
-      // } else if (serverType === 'github-mcp') {
-      //   const { setupMCPServer } = await import('../mcpServers/githubMCPServer');
-      //   this.currentServer = await setupMCPServer();
-      // } else {
-      //   throw new Error(`Unknown server type: ${serverType}`);
-      // }
+      console.log(`🚀 Starting ${serverType} server...`);      
 
-      const serverPath = this.initialMock[serverType as keyof typeof this.initialMock];
+      const serverPath = MCP_SERVERS[serverType as keyof typeof MCP_SERVERS].serverPath;
       const { setupMCPServer } = await import(serverPath);
       this.currentServer = await setupMCPServer();
 

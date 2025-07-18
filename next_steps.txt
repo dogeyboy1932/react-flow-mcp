@@ -1,0 +1,5 @@
+1. could you create your own mcp server from the UI itself? (Code would need to be copied and pasted?)
+I feel this functionality has been issued by no-code platforms like n8n...need to find a novelty in this
+
+2. Pre-built tools...open source this and make it modular
+
