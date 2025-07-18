@@ -301,7 +301,7 @@ function createTransport(): TabServerTransport {
   return transport;
 }
 
-export async function setupWeatherMCPServer(): Promise<McpServer> {
+export async function setupMCPServer(): Promise<McpServer> {
   console.log('🌤️ Setting up Weather MCP Server...');
   console.log('DEBUG: Weather server setup started');
   

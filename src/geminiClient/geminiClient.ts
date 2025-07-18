@@ -13,14 +13,15 @@ class GeminiMCPClient {
   private model: any = null;
   private client: Client | null = null;
   private tools: MCPTool[] = [];
-  private currentServer: any = null;  // Track the current running server
+  private currentServer: any = null;
 
-  setApiKey(apiKey: string) {
-    if (!apiKey) return;
-    this.genAI = new GoogleGenerativeAI(apiKey);
-    this.updateModel();
+
+  private initialMock = {
+    'weather-mcp': '../mcpServers/weatherMCPServer',
+    'github-mcp': '../mcpServers/githubMCPServer'
   }
 
+  // Connect Functions
   async connect(serverType: string = 'weather-mcp'): Promise<boolean> {
     try {
       // First, properly disconnect and stop any existing server
@@ -28,15 +29,20 @@ class GeminiMCPClient {
       
       // Start the appropriate server based on type
       console.log(`🚀 Starting ${serverType} server...`);
-      if (serverType === 'weather-mcp') {
-        const { setupWeatherMCPServer } = await import('./weatherMCPServer');
-        this.currentServer = await setupWeatherMCPServer();
-      } else if (serverType === 'github-mcp') {
-        const { setupGitHubMCPServer } = await import('./githubMCPServer');
-        this.currentServer = await setupGitHubMCPServer();
-      } else {
-        throw new Error(`Unknown server type: ${serverType}`);
-      }
+      // if (serverType === 'weather-mcp') {
+      //   const { setupMCPServer } = await import('../mcpServers/weatherMCPServer');
+      //   this.currentServer = await setupMCPServer();
+      // } else if (serverType === 'github-mcp') {
+      //   const { setupMCPServer } = await import('../mcpServers/githubMCPServer');
+      //   this.currentServer = await setupMCPServer();
+      // } else {
+      //   throw new Error(`Unknown server type: ${serverType}`);
+      // }
+
+      const serverPath = this.initialMock[serverType as keyof typeof this.initialMock];
+      const { setupMCPServer } = await import(serverPath);
+      this.currentServer = await setupMCPServer();
+
       
       // Longer delay to ensure server is properly started
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -70,9 +76,11 @@ class GeminiMCPClient {
     }
   }
 
+
   async disconnect() {
     await this.fullDisconnect();
   }
+
 
   private async fullDisconnect() {
     console.log('🔌 Performing full disconnect...');
@@ -107,43 +115,8 @@ class GeminiMCPClient {
     await new Promise(resolve => setTimeout(resolve, 200));
   }
 
-  private updateModel() {
-    if (this.genAI) {
-      this.model = this.genAI.getGenerativeModel({ 
-        model: 'gemini-1.5-flash',
-        tools: this.tools.length > 0 ? this.formatTools() : undefined
-      });
-    }
-  }
 
-  private formatTools() {
-    return [{
-      functionDeclarations: this.tools.map(tool => ({
-        name: tool.name,
-        description: tool.description,
-        parameters: {
-          type: SchemaType.OBJECT,
-          properties: this.convertParams(tool.parameters),
-          required: tool.parameters.required || Object.keys(tool.parameters.properties || {})
-        }
-      }))
-    }];
-  }
-
-  private convertParams(params: any): any {
-    const properties: any = {};
-    if (params.properties) {
-      for (const [key, value] of Object.entries(params.properties)) {
-        const param = value as any;
-        properties[key] = {
-          type: param.type === 'string' ? SchemaType.STRING : SchemaType.NUMBER,
-          description: param.description || key
-        };
-      }
-    }
-    return properties;
-  }
-
+  // Chat Functions
   async chat(message: string): Promise<string> {
     if (!this.model) return 'Please set your API key first.';
 
@@ -186,13 +159,70 @@ class GeminiMCPClient {
     }
   }
 
+
+  setApiKey(apiKey: string) {
+    if (!apiKey) return;
+    this.genAI = new GoogleGenerativeAI(apiKey);
+    this.updateModel();
+  }
+
+
+  // Helper functions
+
+  private updateModel() {
+    if (this.genAI) {
+      this.model = this.genAI.getGenerativeModel({ 
+        model: 'gemini-1.5-flash',
+        tools: this.tools.length > 0 ? this.formatTools() : undefined
+      });
+    }
+  }
+
+  
+  private formatTools() {
+    return [{
+      functionDeclarations: this.tools.map(tool => ({
+        name: tool.name,
+        description: tool.description,
+        parameters: {
+          type: SchemaType.OBJECT,
+          properties: this.convertParams(tool.parameters),
+          required: tool.parameters.required || Object.keys(tool.parameters.properties || {})
+        }
+      }))
+    }];
+  }
+
+  
+  private convertParams(params: any): any {
+    // console.log("Params 1 ", params)
+    const properties: any = {};
+    if (params.properties) {
+      for (const [key, value] of Object.entries(params.properties)) {
+        const param = value as any;
+        properties[key] = {
+          type: param.type === 'string' ? SchemaType.STRING : SchemaType.NUMBER,
+          description: param.description || key
+        };
+      }
+    }
+    
+    // console.log("Params 2 ", properties)
+    return properties;
+  }
+
+  
+  // Getters
+  
   getTools(): MCPTool[] {
     return this.tools;
   }
 
+  
   isConnected(): boolean {
     return this.client !== null;
   }
 }
+
 
 export const geminiClient = new GeminiMCPClient(); 

@@ -226,7 +226,7 @@ function createTransport(): TabServerTransport {
   return transport;
 }
 
-export async function setupGitHubMCPServer(): Promise<McpServer> {
+export async function setupMCPServer(): Promise<McpServer> {
   console.log('📁 Setting up GitHub MCP Server...');
   
   try {

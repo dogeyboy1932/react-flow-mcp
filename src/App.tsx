@@ -14,7 +14,7 @@ import 'reactflow/dist/style.css';
 
 import LLMNode from './components/LLMNode';
 import MCPServerNode from './components/MCPServerNode';
-import { geminiClient } from './services/geminiClient';
+import { geminiClient } from './geminiClient/geminiClient';
 import './App.css';
 
 const nodeTypes: NodeTypes = {
