@@ -1,4 +1,4 @@
-How To Use:
+Setup:
 
 Run the below commands
 ```
@@ -6,18 +6,28 @@ bun install
 bun dev
 ```
 
-create a .env file and paste in this:
-```
-VITE_GOOGLE_API_KEY="your api key"
-```
+Usage:
+There are 4 built-in MCP servers [Weather, Github, Math, and Users]
+
+They are fairly simple. In order to add a node with your own custom github server, follow these steps:
+1. Create your MCP server in the src/mcpServers folder. Make sure there is a function called createMCPServer that returns the server [use the built-in MCPs structure for reference]
+
+2. Add your MCP server to the mcp_config.js. You should then be able to see your server node on the frontend (make sure you set the node coordinates so you can actually see your MCP node).
+
+3. After you set your API key and connect the Gemini LLM node to your MCP server node on the frontend, you should be set!
 
 
 
-Next Steps:
+Notes:
+- Used mcp-b transports to allow mcps to be identifiable on the browser :)
+- Used bun cuz it's supposedly faster
+
+
+Next Steps / Improvements to be made:
 1. could you create your own mcp server from the UI itself? (Code would need to be copied and pasted?)
 I feel this functionality has been issued by no-code platforms like n8n...need to find a novelty in this
 
-2. Pre-built tools...open source this and make it modular
+2. Need more modularity
 
 3. Make chat a context...
 
