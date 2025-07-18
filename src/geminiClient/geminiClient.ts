@@ -2,8 +2,10 @@ import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { TabClientTransport } from '@mcp-b/transports';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 
-import { MCP_SERVERS } from '../mcp_config';
+// import { MCP_SERVERS } from '../mcp_config';
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+
+import { setupMCPServer } from '../mcpServers/_shared';
 
 
 interface MCPTool {
@@ -30,9 +32,9 @@ class GeminiMCPClient {
       // Start the appropriate server based on type
       console.log(`🚀 Starting ${serverType} server...`);      
 
-      const serverPath = MCP_SERVERS[serverType as keyof typeof MCP_SERVERS].serverPath;
-      const { setupMCPServer } = await import(serverPath);
-      this.currentServer = await setupMCPServer();
+      // const serverPath = MCP_SERVERS[serverType as keyof typeof MCP_SERVERS].serverPath;
+      // const { setupMCPServer } = await import(serverPath);
+      this.currentServer = await setupMCPServer(serverType);
 
       this.currentServerName = serverType;
 

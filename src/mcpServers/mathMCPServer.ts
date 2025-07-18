@@ -1,6 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { TabServerTransport } from '@mcp-b/transports';
 import { z } from 'zod';
+
+
 
 // Helper functions for math operations
 function add(a: number, b: number): number {
@@ -45,8 +46,11 @@ function factorial(n: number): number {
   return result;
 }
 
-// Create and configure Math MCP server
-function createMathMcpServer(): McpServer {
+
+
+
+// MATH MCP SERVER
+export function createMcpServer(): McpServer {
   const server = new McpServer({
     name: "math-mcp",
     version: "1.0.0",
@@ -312,27 +316,3 @@ function createMathMcpServer(): McpServer {
   return server;
 }
 
-function createTransport(): TabServerTransport {
-  const transport = new TabServerTransport({
-    allowedOrigins: ['*']
-  });
-
-  return transport;
-}
-
-export async function setupMCPServer(): Promise<McpServer> {
-  console.log('🧮 Setting up Math MCP Server...');
-  
-  try {
-    const transport: TabServerTransport = createTransport();
-    const server = createMathMcpServer();
-
-    await server.connect(transport);
-    
-    console.log('✅ Math MCP Server connected and ready');
-    return server;
-  } catch (error) {
-    console.error('❌ Error setting up Math MCP Server:', error);
-    throw error;
-  }
-}

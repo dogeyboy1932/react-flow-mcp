@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -12,7 +12,6 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
-import UserTable from './components/UsersTable';
 import ChatSection from './components/ChatBar';
 
 import LLMNode from './components/nodes/LLMNode';
@@ -192,8 +191,6 @@ function App() {
           <Controls />
         </ReactFlow>
       </div>
-
-      <UserTable />
       
       {/* Chat Section */}
       <ChatSection addChatMessage={addChatMessage} chatHistory={chatHistory} />

@@ -1,8 +1,9 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { TabServerTransport } from '@mcp-b/transports';
 import { z } from 'zod';
 
-// GitHub API helper function
+
+
+// Helper functions
 async function makeGitHubRequest(url: string) {
   try {
     const response = await fetch(url, {
@@ -24,8 +25,10 @@ async function makeGitHubRequest(url: string) {
   }
 }
 
-// Create and configure GitHub MCP server
-function createGitHubMcpServer(): McpServer {
+
+
+// GITHUB MCP SERVER
+export function createMcpServer(): McpServer {
   const server = new McpServer({
     name: "github-mcp",
     version: "1.0.0",
@@ -217,28 +220,3 @@ function createGitHubMcpServer(): McpServer {
 
   return server;
 }
-
-function createTransport(): TabServerTransport {
-  const transport = new TabServerTransport({
-    allowedOrigins: ['*']
-  });
-
-  return transport;
-}
-
-export async function setupMCPServer(): Promise<McpServer> {
-  console.log('📁 Setting up GitHub MCP Server...');
-  
-  try {
-    const transport: TabServerTransport = createTransport();
-    const server = createGitHubMcpServer();
-
-    await server.connect(transport);
-    
-    console.log('✅ GitHub MCP Server connected and ready');
-    return server;
-  } catch (error) {
-    console.error('❌ Error setting up GitHub MCP Server:', error);
-    throw error;
-  }
-} 

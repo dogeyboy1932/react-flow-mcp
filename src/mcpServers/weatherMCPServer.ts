@@ -1,11 +1,13 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { TabServerTransport } from '@mcp-b/transports';
 import { z } from 'zod';
 
+
+// Constants
 const NWS_API_BASE = "https://api.weather.gov";
 const USER_AGENT = "weather-app/1.0";
 
-// Helper function for making NWS API requests
+
+// Helper functions
 async function makeNWSRequest(url: string) {
   const headers = {
     "User-Agent": USER_AGENT,
@@ -25,7 +27,6 @@ async function makeNWSRequest(url: string) {
   }
 }
 
-// Helper function for geocoding
 async function getCoordinatesForCity(location: string) {
   try {
     const encodedLocation = encodeURIComponent(location + ', USA');
@@ -49,8 +50,10 @@ async function getCoordinatesForCity(location: string) {
   }
 }
 
-// Create and configure Weather MCP server
-function createWeatherMcpServer(): McpServer {
+
+
+// WEATHER MCP SERVER
+export function createMcpServer(): McpServer {
   const server = new McpServer({
     name: "weather-mcp",
     version: "1.0.0",
@@ -292,40 +295,3 @@ function createWeatherMcpServer(): McpServer {
 
   return server;
 }
-
-function createTransport(): TabServerTransport {
-  const transport = new TabServerTransport({
-    allowedOrigins: ['*']
-  });
-
-  return transport;
-}
-
-export async function setupMCPServer(): Promise<McpServer> {
-  console.log('🌤️ Setting up Weather MCP Server...');
-  console.log('DEBUG: Weather server setup started');
-  
-  try {
-    // console.log('DEBUG: Creating TabServerTransport for weather');
-    const transport: TabServerTransport = createTransport();
-    // console.log('DEBUG: Weather TabServerTransport created successfully:', transport);
-    
-    // console.log('DEBUG: Creating weather MCP server');
-    const server = createWeatherMcpServer();
-    // console.log('DEBUG: Weather MCP server created successfully:', server);
-
-    // console.log('DEBUG: About to connect weather server to transport');
-    // Connect the server
-    await server.connect(transport);
-    // console.log('DEBUG: Weather server connected to transport successfully');
-    
-    console.log('✅ Weather MCP Server connected and ready');
-    // console.log('DEBUG: Weather server setup completed successfully');
-    return server;
-  } catch (error) {
-    console.error('❌ Error setting up Weather MCP Server:', error);
-    // console.error('DEBUG: Weather setup error details:', error);
-    // console.error('DEBUG: Weather setup error stack:', error instanceof Error ? error.stack : 'No stack trace');
-    throw error;
-  }
-} 

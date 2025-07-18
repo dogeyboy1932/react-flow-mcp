@@ -1,6 +1,8 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { TabServerTransport } from '@mcp-b/transports';
 import { z } from 'zod';
+
+
+
 
 // User interface
 interface User {
@@ -14,7 +16,11 @@ interface User {
 // Constants
 const USERS_STORAGE_KEY = 'users-mcp-data';
 
-// Data access functions
+
+
+
+
+// Helper functions
 export async function loadUsers(): Promise<User[]> {
   try {
     const usersData = localStorage.getItem(USERS_STORAGE_KEY);
@@ -151,8 +157,10 @@ async function sendUsersToFrontend(): Promise<string> {
   `;
 }
 
-// Create and configure Users MCP server
-function createUsersMcpServer(): McpServer {
+
+
+// USERS MCP SERVER
+export function createMcpServer(): McpServer {
   const server = new McpServer({
     name: "users-mcp",
     version: "1.0.0",
@@ -396,27 +404,3 @@ function createUsersMcpServer(): McpServer {
   return server;
 }
 
-function createTransport(): TabServerTransport {
-  const transport = new TabServerTransport({
-    allowedOrigins: ['*']
-  });
-
-  return transport;
-}
-
-export async function setupMCPServer(): Promise<McpServer> {
-  console.log('👤 Setting up Users MCP Server...');
-  
-  try {
-    const transport: TabServerTransport = createTransport();
-    const server = createUsersMcpServer();
-
-    await server.connect(transport);
-    
-    console.log('✅ Users MCP Server connected and ready');
-    return server;
-  } catch (error) {
-    console.error('❌ Error setting up Users MCP Server:', error);
-    throw error;
-  }
-}
