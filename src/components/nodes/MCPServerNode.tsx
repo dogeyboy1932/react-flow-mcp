@@ -1,59 +1,92 @@
-import React, { memo, useState } from 'react';
+import React, { memo } from 'react';
 import { Handle, Position, type NodeProps } from 'reactflow';
 
 interface MCPServerNodeData {
   label: string;
   serverType: string;
   url: string;
+  connected: boolean;
 }
 
-const MCPServerNode: React.FC<NodeProps<MCPServerNodeData>> = ({ data }) => {
-  const [isConnected, setIsConnected] = useState(false);
+
+const MCPServerNode: React.FC<NodeProps<MCPServerNodeData>> = ({ data }) => {  
+  const isConnected = data.connected;
+
   
   return (
     <div style={{
-      background: isConnected ? '#e8f5e8' : '#fff3e0',
-      border: `2px solid ${isConnected ? '#4caf50' : '#ff9800'}`,
-      borderRadius: '10px',
-      padding: '15px',
-      minWidth: '150px',
+      background: '#ffffff',
+      border: `2px solid ${isConnected ? '#22c55e' : '#94a3b8'}`,
+      borderRadius: '8px',
+      padding: '16px',
+      minWidth: '170px',
       textAlign: 'center',
-      fontSize: '14px',
-      fontWeight: 'bold',
-      color: isConnected ? '#4caf50' : '#ff9800'
+      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+      position: 'relative'
     }}>
-      <div>🔧 {data.label}</div>
-      <div style={{ fontSize: '12px', marginTop: '5px', fontWeight: 'normal' }}>
+      {/* Status stripe */}
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '3px',
+        background: isConnected ? '#22c55e' : '#94a3b8',
+        borderRadius: '6px 6px 0 0'
+      }} />
+      
+      <div style={{
+        fontSize: '15px',
+        fontWeight: '600',
+        color: '#1e293b',
+        marginBottom: '6px'
+      }}>
+        🔧 {data.label}
+      </div>
+      
+      <div style={{
+        fontSize: '11px',
+        color: '#64748b',
+        marginBottom: '8px',
+        textTransform: 'uppercase',
+        letterSpacing: '0.5px',
+        fontWeight: '500'
+      }}>
         {data.serverType} MCP
       </div>
-      <div style={{ 
-        fontSize: '10px', 
-        marginTop: '3px', 
-        fontWeight: 'normal',
-        color: '#666'
+      
+      <div style={{
+        fontSize: '9px',
+        color: '#94a3b8',
+        marginBottom: '10px',
+        fontFamily: 'monospace',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap'
       }}>
         {data.url}
       </div>
-      <div style={{ 
-        fontSize: '10px', 
-        marginTop: '5px',
-        color: isConnected ? '#4caf50' : '#ff9800'
+      
+      <div style={{
+        fontSize: '10px',
+        fontWeight: '500',
+        color: isConnected ? '#22c55e' : '#94a3b8'
       }}>
         {isConnected ? '● Connected' : '○ Disconnected'}
       </div>
       
-      {/* Input handle to receive connections from LLM */}
       <Handle
         type="target"
         position={Position.Left}
         style={{
-          background: isConnected ? '#4caf50' : '#ff9800',
-          width: '12px',
-          height: '12px'
+          background: isConnected ? '#22c55e' : '#94a3b8',
+          width: '10px',
+          height: '10px',
+          border: 'none'
         }}
       />
     </div>
   );
 };
 
-export default memo(MCPServerNode); 
+export default memo(MCPServerNode);

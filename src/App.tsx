@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -18,7 +18,6 @@ import LLMNode from './components/nodes/LLMNode';
 import MCPServerNode from './components/nodes/MCPServerNode';
 
 import { geminiClient } from './geminiClient/geminiClient';
-import './App.css';
 
 import { MCP_SERVERS } from './mcp_config';
 
@@ -42,6 +41,7 @@ const createMCPServerNode = (id: string, config: typeof MCP_SERVERS[keyof typeof
     serverType: id,
     url: config.url,
     description: `${config.label} - Not connected`,
+    connected: false,
   },
 });
 
@@ -86,24 +86,24 @@ function App() {
 
 
   // NODES
-  const updateNodeDescription = useCallback((nodeId: string, description: string) => {
+  const updateNode = useCallback((nodeId: string, description: string, isConnected: boolean) => {
     setNodes(nodes => nodes.map(node => 
       node.id === nodeId 
-        ? { ...node, data: { ...node.data, description } }
+        ? { ...node, data: { ...node.data, description, connected: isConnected } }
         : node
     ));
   }, [setNodes]);
 
-  const onEdgesDelete = useCallback(async (edgesToDelete: Edge[]) => {
-    for (const edge of edgesToDelete) {
-      if (edge.source === LLM_NODE_ID && isMCPServer(edge.target)) {
-        await geminiClient.disconnect();
-        const serverName = getServerName(edge.target);
-        addChatMessage(`🔌 Disconnected from ${serverName}`);
-        updateNodeDescription(edge.target, `${serverName} - Not connected`);
-      }
-    }
-  }, [addChatMessage, updateNodeDescription]);
+  // const onEdgesDelete = useCallback(async (edgesToDelete: Edge[]) => {
+  //   for (const edge of edgesToDelete) {
+  //     if (edge.source === LLM_NODE_ID && isMCPServer(edge.target)) {
+  //       await geminiClient.disconnect();
+  //       const serverName = getServerName(edge.target);
+  //       addChatMessage(`🔌 Disconnected from ${serverName}`);
+  //       updateNode(edge.target, `${serverName} - Not connected`, false);
+  //     }
+  //   }
+  // }, [addChatMessage, updateNode]);
 
 
 
@@ -117,11 +117,11 @@ function App() {
     
     if (success) {
       addChatMessage(`🔗 Connected to ${serverName} (${toolCount} tools)`);
-      updateNodeDescription(targetId, `${serverName} - ${toolCount} tools`);
+      updateNode(targetId, `${serverName} - ${toolCount} tools`, true);
     } else {
       addChatMessage(`⚠️ Failed to connect to ${serverName}`);
     }
-  }, [addChatMessage, updateNodeDescription]);
+  }, [addChatMessage, updateNode]);
 
 
   const disconnectExistingMCP = useCallback(async () => {
@@ -141,12 +141,12 @@ function App() {
       // Reset node descriptions
       mcpEdges.forEach(edge => {
         const serverName = getServerName(edge.target);
-        updateNodeDescription(edge.target, `${serverName} - Not connected`);
+        updateNode(edge.target, `${serverName} - Not connected`, false);
       });
       
       addChatMessage('🔌 Auto-disconnected previous server to connect to new one');
     }
-  }, [edges, setEdges, updateNodeDescription, addChatMessage]);
+  }, [edges, setEdges, updateNode, addChatMessage]);
 
 
   const onConnect = useCallback(async (params: Connection) => {
@@ -163,9 +163,14 @@ function App() {
   }, [setEdges, disconnectExistingMCP, connectToMCP]);
 
 
+  useEffect(() => {
+    localStorage.clear();
+  }, []);
+
 
   return (
-    <div style={{ 
+    <div 
+    style={{ 
       width: '100vw', 
       height: '100vh', 
       display: 'flex',
@@ -173,30 +178,44 @@ function App() {
       color: '#e0e0e0',
       fontFamily: 'system-ui, sans-serif',
       overflow: 'hidden'
-    }}>
+    }}
+    >
       
-      {/* React Flow Section */}
-      <div style={{ width: '100%', height: '100%' }}>
+      
+    
+      <div style={{ 
+        width: '100%',       // Fixed width
+        height: '100%',      // Fixed height  
+        // margin: '20px auto',  // Center it
+        border: '1px solid #333', // So you can see the boundary
+        overflow: 'hidden'
+      }}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
-          onEdgesDelete={onEdgesDelete}
           nodeTypes={nodeTypes}
-          style={{ backgroundColor: '#1a1a1a' }}
+          style={{ width: '100%', height: '100%', backgroundColor: '#1a1a1a' }}
+          elementsSelectable={true}
+          deleteKeyCode={['Backspace', 'Delete']}
+          fitView
         >
           <Background color="#333" />
           <Controls />
         </ReactFlow>
+
+        
+
       </div>
-      
+
       {/* Chat Section */}
-      <ChatSection addChatMessage={addChatMessage} chatHistory={chatHistory} />
+      <ChatSection addChatMessage={addChatMessage} chatHistory={chatHistory} />      
 
     </div>
   );
 }
 
 export default App;
+

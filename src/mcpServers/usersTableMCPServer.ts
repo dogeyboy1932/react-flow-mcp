@@ -18,8 +18,6 @@ const USERS_STORAGE_KEY = 'users-mcp-data';
 
 
 
-
-
 // Helper functions
 export async function loadUsers(): Promise<User[]> {
   try {
@@ -34,6 +32,11 @@ export async function loadUsers(): Promise<User[]> {
     return [];
   }
 }
+
+
+const users = await loadUsers();
+
+
 
 export async function saveUsers(users: User[]): Promise<void> {
   try {
@@ -50,7 +53,6 @@ export async function createUser(userData: {
   address: string;
   phone: string;
 }): Promise<number> {
-  const users = await loadUsers();
   const id = users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1;
   
   users.push({ id, ...userData });
@@ -60,7 +62,6 @@ export async function createUser(userData: {
 }
 
 export async function deleteUser(id: number): Promise<User | null> {
-  const users = await loadUsers();
   const userIndex = users.findIndex(u => u.id === id);
   
   if (userIndex === -1) {
@@ -74,7 +75,6 @@ export async function deleteUser(id: number): Promise<User | null> {
 }
 
 export async function clearAllUsers(): Promise<number> {
-  const users = await loadUsers();
   const count = users.length;
   
   await saveUsers([]);
@@ -112,50 +112,6 @@ async function createUserWithData(userData: Omit<User, 'id'>): Promise<User> {
   return { id, ...userData };
 }
 
-// Helper function to send users to frontend
-async function sendUsersToFrontend(): Promise<string> {
-  const users = await loadUsers();
-  
-  if (users.length === 0) {
-    return `
-      <div style="text-align: center; padding: 20px; color: #666;">
-        <p>No users found. Create some users to see them here!</p>
-      </div>
-    `;
-  }
-
-  const tableRows = users.map(user => `
-    <tr>
-      <td style="padding: 8px; border-bottom: 1px solid #eee;">${user.id}</td>
-      <td style="padding: 8px; border-bottom: 1px solid #eee;">${user.name}</td>
-      <td style="padding: 8px; border-bottom: 1px solid #eee;">${user.email}</td>
-      <td style="padding: 8px; border-bottom: 1px solid #eee;">${user.phone}</td>
-      <td style="padding: 8px; border-bottom: 1px solid #eee;">${user.address}</td>
-    </tr>
-  `).join('');
-
-  return `
-    <div style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px;">
-      <table style="width: 100%; border-collapse: collapse; font-family: Arial, sans-serif;">
-        <thead>
-          <tr style="background-color: #f5f5f5; position: sticky; top: 0;">
-            <th style="padding: 12px 8px; text-align: left; border-bottom: 2px solid #ddd; font-weight: bold;">ID</th>
-            <th style="padding: 12px 8px; text-align: left; border-bottom: 2px solid #ddd; font-weight: bold;">Name</th>
-            <th style="padding: 12px 8px; text-align: left; border-bottom: 2px solid #ddd; font-weight: bold;">Email</th>
-            <th style="padding: 12px 8px; text-align: left; border-bottom: 2px solid #ddd; font-weight: bold;">Phone</th>
-            <th style="padding: 12px 8px; text-align: left; border-bottom: 2px solid #ddd; font-weight: bold;">Address</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${tableRows}
-        </tbody>
-      </table>
-    </div>
-    <div style="margin-top: 10px; text-align: center; color: #666; font-size: 14px;">
-      Total Users: ${users.length}
-    </div>
-  `;
-}
 
 
 
@@ -300,34 +256,6 @@ export function createMcpServer(): McpServer {
           content: [{
             type: 'text',
             text: `❌ Failed to get users: ${error instanceof Error ? error.message : 'Unknown error'}`
-          }]
-        };
-      }
-    }
-  );
-
-  // Show users table
-  server.tool(
-    'show-users-table',
-    {},
-    async () => {
-      console.log(`📊 Users: Showing users table`);
-      
-      try {
-        const tableHtml = await sendUsersToFrontend();
-        
-        return {
-          content: [{
-            type: 'text',
-            text: `📊 Users Table:\n\n${tableHtml}`
-          }]
-        };
-      } catch (error) {
-        console.error('Failed to show users table:', error);
-        return {
-          content: [{
-            type: 'text',
-            text: `❌ Failed to show users table: ${error instanceof Error ? error.message : 'Unknown error'}`
           }]
         };
       }
