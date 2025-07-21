@@ -5,6 +5,8 @@ Run the below commands
 bun install
 bun dev
 ```
+(you could also use other package managers like npm)
+
 
 Usage:
 There are 4 built-in MCP servers [Weather, Github, Math, and Users] They should appear as nodes on the UI.

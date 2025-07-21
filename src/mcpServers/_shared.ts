@@ -9,7 +9,7 @@ export async function setupMCPServer(serverType: string): Promise<McpServer> {
     const serverPath = MCP_SERVERS[serverType as keyof typeof MCP_SERVERS].serverPath;
     const serverName = MCP_SERVERS[serverType as keyof typeof MCP_SERVERS].label;
 
-    const { createMcpServer } = await import(serverPath);
+    const { createMcpServer } = await import(/* @vite-ignore */ serverPath);
 
     try {
         const transport: TabServerTransport = new TabServerTransport({
