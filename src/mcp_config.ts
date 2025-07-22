@@ -1,18 +1,18 @@
 // Configuration
 export const MCP_SERVERS = {
-    'weather-mcp': {
+    'weather': {
       label: 'Weather MCP',
       position: { x: 400, y: 50 },
       url: 'mcp://weather-mcp',
       serverPath: '../mcpServers/weatherMCPServer',
     },
-    'github-mcp': {
+    'github': {
       label: 'GitHub MCP',
       position: { x: 400, y: 200 },
       url: 'mcp://github-mcp',
       serverPath: '../mcpServers/githubMCPServer',
     },
-    'userTable-mcp': {
+    'userTable': {
       label: 'Users MCP',
       position: { x: 400, y: 350 },
       url: 'mcp://users-mcp',

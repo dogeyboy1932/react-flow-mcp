@@ -36,6 +36,9 @@ export async function loadUsers(): Promise<User[]> {
 
 const users = await loadUsers();
 
+export async function getUserById(id: number): Promise<User | null> {
+  return users.find(u => u.id === id) || null;
+}
 
 
 export async function saveUsers(users: User[]): Promise<void> {
@@ -256,6 +259,45 @@ export function createMcpServer(): McpServer {
           content: [{
             type: 'text',
             text: `❌ Failed to get users: ${error instanceof Error ? error.message : 'Unknown error'}`
+          }]
+        };
+      }
+    }
+  );
+
+
+  server.tool(
+    'get-user-by-id',
+    {
+      id: z.number().describe('User ID to get')
+    },
+    async ({ id }) => {
+      console.log(`👤 Users: Getting user by id ${id}`);
+      
+      try {
+        const user = await getUserById(id);
+        
+        if (!user) {
+          return {
+            content: [{
+              type: 'text',
+              text: `📋 No user found with id ${id}`
+            }]
+          };
+        }
+
+        return {
+          content: [{
+            type: 'text',
+            text: `📋 User with id ${id}:\n\n${user.name}\n📧 ${user.email}\n📞 ${user.phone}\n🏠 ${user.address}`
+          }]
+        };
+      } catch (error) {
+        console.error('Failed to get user by id:', error);
+        return {
+          content: [{
+            type: 'text',
+            text: `❌ Failed to get user by id: ${error instanceof Error ? error.message : 'Unknown error'}`
           }]
         };
       }
