@@ -2,28 +2,33 @@ import { MCP_SERVERS } from "./_mcp_config";
 import { TabServerTransport } from "@mcp-b/transports";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
-  
+const modules = import.meta.glob('./*MCPServer.ts');
+
 export async function setupMCPServer(serverType: string): Promise<McpServer> {
-    console.log(`👤 Setting up ${serverType} MCP Server...`);
+  console.log(`👤 Setting up ${serverType} MCP Server...`);
 
-    const serverPath = MCP_SERVERS[serverType as keyof typeof MCP_SERVERS].serverPath;
-    const serverName = MCP_SERVERS[serverType as keyof typeof MCP_SERVERS].label;
+  const serverName = MCP_SERVERS[serverType as keyof typeof MCP_SERVERS].label;
+  const path = `./${serverType}MCPServer.ts`;
 
-    const { createMcpServer } = await import(/* @vite-ignore */ serverPath);
+  if (!modules[path]) {
+    throw new Error(`Unknown server type: ${serverType}`);
+  }
 
-    try {
-        const transport: TabServerTransport = new TabServerTransport({
-            allowedOrigins: ['*']
-        });
+  const module = await modules[path]();
+  const createMcpServer = (module as { createMcpServer: () => McpServer }).createMcpServer;
 
-        const server = createMcpServer();
+  try {
+    const transport: TabServerTransport = new TabServerTransport({
+      allowedOrigins: ['*']
+    });
 
-        await server.connect(transport);
+    const server = createMcpServer();
+    await server.connect(transport);
 
-        console.log(`✅ ${serverName} MCP Server connected and ready`);
-        return server;
-    } catch (error) {
-        console.error(`❌ Error setting up ${serverName} MCP Server:`, error);
-        throw error;
-    }
+    console.log(`✅ ${serverName} MCP Server connected and ready`);
+    return server;
+  } catch (error) {
+    console.error(`❌ Error setting up ${serverName} MCP Server:`, error);
+    throw error;
+  }
 }
