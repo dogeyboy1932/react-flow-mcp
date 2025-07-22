@@ -12,7 +12,7 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
-import ChatSection from './components/ChatBar';
+import ChatSection from './components/ChatPanel';
 
 import LLMNode from './components/nodes/LLMNode';
 import MCPServerNode from './components/nodes/MCPServerNode';
