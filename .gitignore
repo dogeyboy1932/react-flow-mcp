@@ -26,4 +26,6 @@ dist-ssr
 
 public
 
+bun.lock
+
 .env
