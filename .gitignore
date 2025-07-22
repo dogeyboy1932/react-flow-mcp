@@ -24,8 +24,8 @@ dist-ssr
 *.sln
 *.sw?
 
-public
 
 bun.lock
 
 .env
+notes.txt
