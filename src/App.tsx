@@ -19,7 +19,7 @@ import MCPServerNode from './components/nodes/MCPServerNode';
 
 import { geminiClient } from './geminiClient/geminiClient';
 
-import { MCP_SERVERS } from './mcp_config';
+import { MCP_SERVERS } from './mcpServers/_mcp_config';
 
 
 

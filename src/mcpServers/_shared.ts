@@ -1,4 +1,4 @@
-import { MCP_SERVERS } from "../mcp_config";
+import { MCP_SERVERS } from "./_mcp_config";
 import { TabServerTransport } from "@mcp-b/transports";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
