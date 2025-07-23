@@ -18,6 +18,7 @@ They are fairly simple. In order to add a node designated to your own custom git
 
 3. After you set your API key and connect the Gemini LLM node to your MCP server node on the frontend, you should be set!
 
+
 Notes:
 - Used mcp-b transports to allow mcps to be identifiable on the browser :)
 - Used bun cuz it's supposedly faster
