@@ -1,10 +1,203 @@
-import { useCallback, useState } from "react";
+// import { useEffect, useRef, useState } from "react";
 import { geminiClient } from "../geminiClient/geminiClient";
 
 
-export default function ChatSection({ addChatMessage, chatHistory }: { addChatMessage: (message: string) => void, chatHistory: string[] }) {
-  const [chatMessage, setChatMessage] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+// /**
+//  * Copyright 2024 Google LLC
+//  * Licensed under the Apache License, Version 2.0
+//  */
+// import cn from "classnames";
+// import { useEffect, useRef, useState } from "react";
+// import { useLiveAPIContext } from "./contexts/LiveAPIContext";
+
+// Types
+// import type { QueryResult, CommandHistoryEntry, ToolResponse } from '../voice-stuff/types/tool-types';
+// import type { ToolCall } from "../voice-stuff/types/multimodal-live-types";
+
+// Components
+// import SidePanel from "../voice-stuff/components/side-panel/SidePanel";
+// import ControlTray from "../voice-stuff/components/control-tray/ControlTray";
+// import { Alert, AlertDescription } from '../voice-stuff/components/alert/alert';
+// import { AlertCircle } from 'lucide-react';
+
+// Tools and Components
+// import { DatabaseQuery, handleDatabaseQuery } from '../voice-stuff/tools/database-tool';
+// import { ShellTool, handleShellCommand } from '../voice-stuff/tools/shell-executor-tool';
+// import { GraphingTool } from "../voice-stuff/tools/altair-tool";
+
+import { LLM_CONFIG } from "../voice-stuff/config/llmConfig";
+
+// Styles
+// import "../voice-stuff/App.scss";
+import { useLiveAPIContext } from "../contexts/LiveAPIContext";
+
+import cn from "classnames";
+// import { useLoggerStore } from "../voice-stuff/components/logger/store-logger";
+
+
+import { memo, type ReactNode, type RefObject, useCallback, useEffect, useRef, useState } from "react";
+import { 
+  Mic, 
+  MicOff, 
+  // Video, 
+  // VideoOff, 
+  // Monitor, 
+  // MonitorX, 
+  Play, 
+  Pause,
+  Send
+} from "lucide-react";
+// import type { UseMediaStreamResult } from "../../hooks/use-media-stream-mux";
+// import { useScreenCapture } from "../../hooks/use-screen-capture";
+// import { useWebcam } from "../../hooks/use-webcam";
+import { AudioRecorder } from "../voice-stuff/lib/audio-recorder.ts";
+import AudioPulse from "../voice-stuff/components/audio-pulse/AudioPulse";
+import "../voice-stuff/styles/control-tray.scss";
+// import { useLoggerStore } from "../voice-stuff/components/logger/store-logger";
+
+import { useLoggerStore } from "../../archive/logger/store-logger.ts";
+import type { StreamingLog } from "../voice-stuff/types/multimodal-live-types.ts";
+
+import Logger, { component } from "../../archive/logger/Logger.tsx";
+
+
+
+
+
+
+export default function ChatSection(
+    // { addChatMessage, chatHistory }: { addChatMessage: (message: string) => void, chatHistory: string[] }
+) {
+    const [chatMessage, setChatMessage] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+
+    // const { client, setConfig } = useLiveAPIContext();
+
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const [activeVideoStream, setActiveVideoStream] =
+    useState<MediaStream | null>(null);
+    // const [webcam, screenCapture] = videoStreams;
+    const [inVolume, setInVolume] = useState(0);
+    const [audioRecorder] = useState(() => new AudioRecorder());
+    const [muted, setMuted] = useState(false);
+    const renderCanvasRef = useRef<HTMLCanvasElement>(null);
+    const connectButtonRef = useRef<HTMLButtonElement>(null);
+    // const [geminiApiKey, setGeminiApiKey] = useState('');
+    const [isTranscribing, setIsTranscribing] = useState(false);
+    // const [transcribedText, setTranscribedText] = useState('');control-tray
+
+    const [chatHistory, setChatHistory] = useState<string[]>([
+        '🎉 Ready! Connect the LLM to any MCP server to start.'
+    ]);
+
+    const { client, connected, connect, disconnect, volume, setConfig } = useLiveAPIContext();
+    
+    const { log, logs, clearLogs } = useLoggerStore();
+
+
+    // CHAT HISTORY
+    const addChatMessage = useCallback((message: string) => {
+        setChatHistory(prev => [...prev, message]);
+    }, []);
+
+    useEffect(() => {
+        if (logs.length === 0) return;
+        
+        console.log(logs);
+
+        logs.forEach((log) => {
+        if (typeof log.message === "string") {
+            addChatMessage(log.message);
+        }
+        });
+
+        clearLogs();
+    }, [logs]);
+
+
+
+    useEffect(() => {
+        client.on("log", log);
+        return () => {
+        client.off("log", log);
+        };
+    }, [client, log]);
+
+
+
+
+// const LogEntry = ({
+//     log,
+//     MessageComponent,
+//   }: {
+//     log: StreamingLog;
+//     MessageComponent: ({
+//       message,
+//     }: {
+//       message: StreamingLog["message"];
+//     }) => ReactNode;
+//   }): JSX.Element => (
+//     <li
+//       className={cn(
+//         `plain-log`,
+//         `source-${log.type.slice(0, log.type.indexOf("."))}`,
+//         {
+//           receive: log.type.includes("receive"),
+//           send: log.type.includes("send"),
+//         },
+//       )}
+//     >
+//       <span className="timestamp">{formatTime(log.date)}</span>
+//       <span className="source">{log.type}</span>
+//       <span className="message">
+//         <MessageComponent message={log.message} />
+//       </span>
+//       {log.count && <span className="count">{log.count}</span>}
+//     </li>
+//   );
+
+
+
+useEffect(() => {
+    const onData = (base64: string) => {
+      // if (isTranscribing) {
+      //   // This is where you would send the audio data to a speech-to-text service
+      //   // For this example, we'll just simulate it by appending " " to the transcribed text
+      //   setTranscribedText(prev => prev + " ");
+      // }
+      client.sendRealtimeInput([
+        {
+          mimeType: "audio/pcm;rate=16000",
+          data: base64,
+        },
+      ]);
+    };
+
+    if (connected && !muted && audioRecorder) {
+      audioRecorder.on("data", onData).on("volume", setInVolume).start();
+    } else {
+      audioRecorder.stop();
+    }
+
+    return () => {
+      console.log("CLOSE")
+      audioRecorder.off("data", onData).off("volume", setInVolume);
+    };
+
+
+  }, [connected, client, muted, audioRecorder, isTranscribing]);
+
+
+
+  
+
+
+//   const { log, logs } = useLoggerStore();
+  
+  // LLM Configuration  ***
+  useEffect(() => {
+    setConfig(LLM_CONFIG);
+  }, [setConfig]);
 
   const handleSendMessage = async () => {
       if (!chatMessage.trim() || isLoading) return;
@@ -15,8 +208,12 @@ export default function ChatSection({ addChatMessage, chatHistory }: { addChatMe
   
       try {
         addChatMessage(`You: ${userMessage}`);
-        const response = await geminiClient.chat(userMessage);
-        addChatMessage(`Gemini: ${response}`);
+        // const response = await geminiClient.chat(userMessage);
+        // addChatMessage(`Gemini: ${response}`);
+
+        client.send([{
+            text: userMessage,
+        }]);
       } catch (error) {
         addChatMessage(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
       } finally {
@@ -175,6 +372,10 @@ export default function ChatSection({ addChatMessage, chatHistory }: { addChatMe
                       </div>
                   ))
               )}
+
+              {/* <Logger
+                // filter="conversations"
+              /> */}
               
               {isLoading && (
                   <div style={{ 
@@ -243,7 +444,71 @@ export default function ChatSection({ addChatMessage, chatHistory }: { addChatMe
               >
                   {isLoading ? '...' : 'Send'}
               </button>
+              
           </div>
-      </div>
+          {/* Chat Input */}
+          <div style={{ 
+              display: 'flex', 
+              gap: '10px',
+              flexShrink: 0  // Prevent shrinking
+          }}>
+              <nav className={cn("actions-nav", { disabled: !connected })}>
+                <button
+                className={cn("action-button mic-button", { muted })}
+                onClick={() => setMuted(!muted)}
+                title={muted ? "Unmute microphone" : "Mute microphone"}
+                >
+                {!muted ? (
+                    <Mic className="lucide-icon" />
+                ) : (
+                    <MicOff className="lucide-icon" />
+                )}
+                </button>
+
+                <div className="action-button no-action outlined">
+                <AudioPulse volume={volume} active={connected} hover={false} />
+                </div>
+            
+            
+            
+            </nav>
+            
+            <button className={cn("connection-container", { connected })}
+                ref={connectButtonRef}
+                onClick={connected ? disconnect : connect}
+                title={connected ? "Disconnect" : "Connect"}
+            >
+                <div className="connection-button-container">
+                    {connected ? (
+                        <Pause className="lucide-icon" />
+                    ) : (
+                        <Play className="lucide-icon" />
+                    )}
+                </div>
+
+                <span className="text-indicator">
+                    {connected ? "Connected" : "Disconnected"}
+                </span>
+            </button>
+              
+          </div>
+          {/* <ControlTray
+                videoRef={videoRef as React.RefObject<HTMLVideoElement>}
+                // supportsVideo={true}
+                // onVideoStreamChange={setVideoStream}
+            /> */}
+          {/* <div className="main-app-area"> */}
+            {/* Video Stream */}
+            {/* <video
+                className={cn("stream", {
+                hidden: !videoRef.current || !videoStream,
+                })}
+                ref={videoRef}
+                autoPlay
+                playsInline
+            /> */}
+              
+        {/* </div> */}
+        </div>
   );
 }
