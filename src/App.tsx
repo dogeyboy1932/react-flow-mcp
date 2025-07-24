@@ -21,8 +21,6 @@ import { geminiClient } from './geminiClient/geminiClient';
 
 import { MCP_SERVERS } from './mcpServers/_mcp_config';
 
-import { useLoggerStore } from '../archive/logger/store-logger.ts';
-
 
 
 const LLM_NODE_ID = 'llm-1';
@@ -75,34 +73,15 @@ function App() {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
-  // const [chatHistory, setChatHistory] = useState<string[]>([
-  //   '🎉 Ready! Connect the LLM to any MCP server to start.'
-  // ]);
+  const [chatHistory, setChatHistory] = useState<string[]>([
+    '🎉 Ready! Connect the LLM to any MCP server to start.'
+  ]);
   
-  // const { log, logs } = useLoggerStore();
 
-
-  // // CHAT HISTORY
-  // const addChatMessage = useCallback((message: string) => {
-  //     setChatHistory(prev => [...prev, message]);
-  // }, []);
-
-  // useEffect(() => {
-  //   console.log(logs);
-
-  //   logs.forEach((log) => {
-  //     if (typeof log.message === "string") {
-  //       addChatMessage(log.message);
-  //     }
-  //   });
-  // }, [logs, log]);
-
-  // useEffect(() => {
-  //   client.on("log", log);
-  //   return () => {
-  //     client.off("log", log);
-  //   };
-  // }, [client, log]);
+  // CHAT HISTORY
+  const addChatMessage = useCallback((message: string) => {
+      setChatHistory(prev => [...prev, message]);
+  }, []);
 
 
 
@@ -132,19 +111,17 @@ function App() {
   const connectToMCP = useCallback(async (targetId: string) => {
     console.log(`🔗 Connecting to ${targetId}...`);
     
-    const success = await geminiClient.mcpConnect(targetId);
+    const success = await geminiClient.connect(targetId);
     const toolCount = geminiClient.getTools().length;
     const serverName = getServerName(targetId);
     
     if (success) {
-      // addChatMessage(`🔗 Connected to ${serverName} (${toolCount} tools)`);
+      addChatMessage(`🔗 Connected to ${serverName} (${toolCount} tools)`);
       updateNode(targetId, `${serverName} - ${toolCount} tools`, true);
     } else {
-      // addChatMessage(`⚠️ Failed to connect to ${serverName}`);
+      addChatMessage(`⚠️ Failed to connect to ${serverName}`);
     }
-  }, [
-    // addChatMessage, 
-    updateNode]);
+  }, [addChatMessage, updateNode]);
 
 
   const disconnectExistingMCP = useCallback(async () => {
@@ -154,7 +131,7 @@ function App() {
     
     if (mcpEdges.length > 0) {
       console.log('🔌 Auto-disconnecting previous MCP connection...');
-      await geminiClient.mcpDisconnect();
+      await geminiClient.disconnect();
       
       // Remove existing MCP edges
       setEdges(eds => eds.filter(edge => 
@@ -167,11 +144,9 @@ function App() {
         updateNode(edge.target, `${serverName} - Not connected`, false);
       });
       
-      // addChatMessage('🔌 Auto-disconnected previous server to connect to new one');
+      addChatMessage('🔌 Auto-disconnected previous server to connect to new one');
     }
-  }, [edges, setEdges, updateNode,
-    //  addChatMessage
-    ]);
+  }, [edges, setEdges, updateNode, addChatMessage]);
 
 
   const onConnect = useCallback(async (params: Connection) => {
@@ -236,9 +211,7 @@ function App() {
       </div>
 
       {/* Chat Section */}
-      <ChatSection 
-        // addChatMessage={addChatMessage} chatHistory={chatHistory} 
-      />      
+      <ChatSection addChatMessage={addChatMessage} chatHistory={chatHistory} />      
 
     </div>
   );

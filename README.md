@@ -23,3 +23,4 @@ They are fairly simple. In order to add a node designated to your own custom git
 Notes:
 - Used mcp-b transports to allow mcps to be identifiable on the browser :)
 - Used bun cuz it's supposedly faster
+# mcpb-voice

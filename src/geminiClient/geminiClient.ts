@@ -6,9 +6,6 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import { setupMCPServer } from '../mcpServers/_shared';
-import { MultimodalLiveClient } from '../voice-stuff/lib/multimodal-live-client';
-import { useCallback, useMemo } from 'react';
-import { API_CONFIG } from '../voice-stuff/config/llmConfig';
 
 
 interface MCPTool {
@@ -25,76 +22,9 @@ class GeminiMCPClient {
   private currentServer: McpServer | null = null;
   private currentServerName: string | null = null;
 
-  private liveClient: MultimodalLiveClient | null = null;
-  
-  
-  // const audioStreamerRef = useRef<AudioStreamer | null>(null);
-
-  // const [connected, setConnected] = useState(false);
-  // const [config, setConfig] = useState<LiveConfig>(
-  //   initialConfig || {
-  //     model: "models/gemini-2.0-flash-exp",
-  //   }
-  // );
-  // const [volume, setVolume] = useState(0);
-
-  // // register audio for streaming server -> speakers
-  // useEffect(() => {
-  //   if (!audioStreamerRef.current) {
-  //     audioContext({ id: "audio-out" }).then((audioCtx: AudioContext) => {
-  //       audioStreamerRef.current = new AudioStreamer(audioCtx);
-  //       audioStreamerRef.current
-  //         .addWorklet<any>("vumeter-out", VolMeterWorket, (ev: any) => {
-  //           setVolume(ev.data.volume);
-  //         })
-  //         .then(() => {
-  //           // Successfully added worklet
-  //         });
-  //     });
-  //   }
-  // }, [audioStreamerRef]);
-
-  // useEffect(() => {
-  //   const onClose = () => {
-  //     setConnected(false);
-  //   };
-
-  //   const stopAudioStreamer = () => audioStreamerRef.current?.stop();
-
-  //   const onAudio = (data: ArrayBuffer) =>
-  //     audioStreamerRef.current?.addPCM16(new Uint8Array(data));
-
-  //   client
-  //     .on("close", onClose)
-  //     .on("interrupted", stopAudioStreamer)
-  //     .on("audio", onAudio)
-
-  //   return () => {
-  //     client
-  //       .off("close", onClose)
-  //       .off("interrupted", stopAudioStreamer)
-  //       .off("audio", onAudio)
-  //   };
-  // }, [client]);
-
-  // async wsConnect = useCallback(async () => {
-  //   console.log(config);
-  //   if (!config) {
-  //     throw new Error("config has not been set");
-  //   }
-  //   client.disconnect();
-  //   await client.connect(config);
-  //   setConnected(true);
-  // }, [client, setConnected, config]);
-
-  // async wsDisconnect = useCallback(async () => {
-  //   client.disconnect();
-  //   setConnected(false);
-  // }, [setConnected, client]);
-
 
   // Connect Functions
-  async mcpConnect(serverType: string = 'weather-mcp'): Promise<boolean> {
+  async connect(serverType: string = 'weather-mcp'): Promise<boolean> {
     try {
       // First, properly disconnect and stop any existing server
       await this.fullDisconnect();
@@ -142,7 +72,7 @@ class GeminiMCPClient {
   }
 
 
-  async mcpDisconnect() {
+  async disconnect() {
     await this.fullDisconnect();
   }
 
@@ -237,9 +167,6 @@ class GeminiMCPClient {
     if (!apiKey) return;
     this.genAI = new GoogleGenerativeAI(apiKey);
     this.updateModel();
-    
-
-    this.liveClient = new MultimodalLiveClient({ url: API_CONFIG.uri, apiKey });
   }
 
 
